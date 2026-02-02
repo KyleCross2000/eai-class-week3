@@ -1,105 +1,66 @@
-"""
-Simple reflex agent for the warehouse environment.
+import random
 
-Uses condition-action rules based on:
-- Current robot position
-- Goal positions (pickup and dropoff)
-- Whether the robot carries an item
-- Includes all 8 directional movement rules (N, NE, SE, S, SW, W, NW, NE)
-"""
-
-from typing import Dict
-from warehouse_env import WarehouseEnv
-
-
-class ReflexWarehouseAgent:
-    """
-    A simple reflex agent that makes decisions based on current observations
-    without maintaining internal state or planning ahead.
-    """
-    
+class WarehouseAgentReflex:
     def __init__(self):
-        """Initialize the reflex agent."""
         pass
     
-    def act(self, observation: Dict[str, object]) -> str:
-        """
-        Decide on an action based on current observation.
+    def act(self, state):
+        # Unpack state using correct keys from WarehouseEnv
+        pos = state['robot_pos']
+        carrying = state['has_item']
+        pickup = state['pickup_pos']
+        dropoff = state['dropoff_pos']
         
-        Condition-action rules:
-        1. If at pickup and no item -> PICK
-        2. If at dropoff and has item -> DROP
-        3. If has item and not at dropoff -> Move toward dropoff
-        4. If no item and not at pickup -> Move toward pickup
-        5. If neither item nor goal reachable -> WAIT (fallback)
-        
-        Movement uses 8 directional rules:
-        N, NE, E, SE, S, SW, W, NW (with cardinal directions as fallback)
-        """
-        robot_pos = observation["robot_pos"]
-        has_item = observation["has_item"]
-        pickup_pos = observation["pickup_pos"]
-        dropoff_pos = observation["dropoff_pos"]
-        
-        # Rule 1: At pickup location and empty-handed -> PICK
-        if robot_pos == pickup_pos and not has_item:
-            return "PICK"
-        
-        # Rule 2: At dropoff location and carrying item -> DROP
-        if robot_pos == dropoff_pos and has_item:
-            return "DROP"
-        
-        # Rule 3: Carrying item -> Move toward dropoff
-        if has_item and dropoff_pos:
-            return self._move_toward(robot_pos, dropoff_pos)
-        
-        # Rule 4: Not carrying item -> Move toward pickup
-        if not has_item and pickup_pos:
-            return self._move_toward(robot_pos, pickup_pos)
-        
-        # Rule 5: Fallback action
-        return "WAIT"
-    
-    def _move_toward(self, current_pos: tuple, goal_pos: tuple) -> str:
-        """
-        Calculate the direction to move toward the goal using 8-directional rules.
-        
-        Returns one of: N, NE, E, SE, S, SW, W, NW
-        Falls back to cardinal directions if needed.
-        """
-        curr_r, curr_c = current_pos
-        goal_r, goal_c = goal_pos
-        
-        # Calculate row and column deltas
-        dr = 0 if goal_r == curr_r else (1 if goal_r > curr_r else -1)
-        dc = 0 if goal_c == curr_c else (1 if goal_c > curr_c else -1)
-        
-        # 8-directional movement rules
-        if dr == -1 and dc == -1:
-            return "NW"  # North-West
-        elif dr == -1 and dc == 0:
-            return "N"   # North
-        elif dr == -1 and dc == 1:
-            return "NE"  # North-East
-        elif dr == 0 and dc == 1:
-            return "E"   # East
-        elif dr == 1 and dc == 1:
-            return "SE"  # South-East
-        elif dr == 1 and dc == 0:
-            return "S"   # South
-        elif dr == 1 and dc == -1:
-            return "SW"  # South-West
-        elif dr == 0 and dc == -1:
-            return "W"   # West
+        # Valid actions are always ['N', 'E', 'S', 'W', 'WAIT', 'PICK', 'DROP']
+        # We'll filter for valid moves by checking the environment, but here we assume all are possible
+        valid_actions = []
+        # Only allow moves that don't hit walls, and only allow PICK/DROP when appropriate
+        # For simplicity, assume all actions are valid (as in the original agent), or adapt if env provides valid_actions
+        if 'valid_actions' in state:
+            valid_actions = state['valid_actions']
         else:
-            return "WAIT"  # Already at goal
-
+            valid_actions = ['N', 'E', 'S', 'W', 'WAIT', 'PICK', 'DROP']
+        
+        # Rule 1: At pickup and not carrying → PICK
+        if pos == pickup and not carrying and 'PICK' in valid_actions:
+            return 'PICK'
+        
+        # Rule 2: At dropoff and carrying → DROP
+        if pos == dropoff and carrying and 'DROP' in valid_actions:
+            return 'DROP'
+        
+        # Rule 3: Carrying, need to move toward dropoff
+        if carrying and dropoff:
+            if dropoff[0] < pos[0] and 'N' in valid_actions:
+                return 'N'
+            if dropoff[0] > pos[0] and 'S' in valid_actions:
+                return 'S'
+            if dropoff[1] < pos[1] and 'W' in valid_actions:
+                return 'W'
+            if dropoff[1] > pos[1] and 'E' in valid_actions:
+                return 'E'
+        
+        # Rule 4: Not carrying, need to move toward pickup
+        elif not carrying and pickup:
+            if pickup[0] < pos[0] and 'N' in valid_actions:
+                return 'N'
+            if pickup[0] > pos[0] and 'S' in valid_actions:
+                return 'S'
+            if pickup[1] < pos[1] and 'W' in valid_actions:
+                return 'W'
+            if pickup[1] > pos[1] and 'E' in valid_actions:
+                return 'E'
+        
+        # Fallback: random valid action
+        return random.choice(valid_actions)
 
 def main():
     """Run a simple demo of the reflex agent."""
+    from warehouse_env import WarehouseEnv
+    
     # Create environment and agent
     env = WarehouseEnv()
-    agent = ReflexWarehouseAgent()
+    agent = WarehouseAgentReflex()
     
     # Reset environment
     obs = env.reset()
