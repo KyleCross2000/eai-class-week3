@@ -9,7 +9,7 @@ This script:
 """
 
 from warehouse_env import WarehouseEnv
-from warehouse_agent_reflex import ReflexWarehouseAgent
+from warehouse_agent_reflex import WarehouseAgentReflex
 from warehouse_viz import replay_animation, save_frames_to_svg
 
 
@@ -37,7 +37,8 @@ def run_episode_with_visualization(
     """
     # Initialize environment and agent
     env = WarehouseEnv(max_steps=max_steps)
-    agent = ReflexWarehouseAgent()
+    agent = WarehouseAgentReflex()
+    agent.reset()  # Reset agent state
     
     # Reset environment
     obs = env.reset(randomize=randomize)
